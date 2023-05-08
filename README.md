@@ -6,3 +6,6 @@ That's all. Player Joins of whitelisted players are logged to BA but the kick re
 
 License is unknown. Please tell mail me / open an issue or contact me on Discord if I should remove the repo.
 Thank you. @BA.
+
+
+Website: https://battlefield.agency/
