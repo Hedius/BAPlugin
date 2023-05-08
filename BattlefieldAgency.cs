@@ -36,6 +36,7 @@ namespace PRoConEvents
         private string serverIp;
         private int serverPort;
         private List<Guid> whitelist;
+        private List<String> localWhitelist;
 
         private int currentPlayerCount;
         private bool firstServerInfoAfterEnable;
@@ -74,6 +75,7 @@ namespace PRoConEvents
             this.kickLog = false;
             this.debug = false;
             this.whitelist = new List<Guid>();
+            this.localWhitelist = new List<String>();
 
             this.currentPlayerCount = 0;
             this.firstServerInfoAfterEnable = false;
@@ -277,21 +279,24 @@ namespace PRoConEvents
                 string soldierName = (string)args["name"];
                 string guid = (string)args["guid"];
                 this.currentlyKicking.TryRemove(soldierName, out int _);
-                if ((bool)args["log"])
-                {
-                    string logReason = (string)args["log_reason"];
-                    ConsoleWrite(String.Format("[Kick] {0}", logReason));
-                    if (this.announceKicks)
-                    {
-                        this.ExecuteCommand("procon.protected.send", "admin.say", String.Format("[Battlefield Agency] [Kick] {0}", logReason), "all");
+                // Local whitelist with names / guids -> added by E4GL for whitelist management over adkats
+                bool locallyWhitelisted = localWhitelist.Contains(soldierName) || localWhitelist.Contains(guid);
+                if (!locallyWhitelisted) {
+                    if ((bool)args["log"]) {
+                        string logReason = (string)args["log_reason"];
+                        ConsoleWrite(String.Format("[Kick] {0}", logReason));
+                        if (this.announceKicks) {
+                            this.ExecuteCommand("procon.protected.send", "admin.say", String.Format("[Battlefield Agency] [Kick] {0}", logReason), "all");
+                        }
+
+                        if (this.kickLog) {
+                            this.WriteKickLog(logReason);
+                        }
                     }
-                    if (this.kickLog)
-                    {
-                        this.WriteKickLog(logReason);
-                    }
+
+                    this.ExecuteKick(soldierName, guid, (string)args["kick_reason"]);
                 }
-                this.ExecuteKick(soldierName, guid, (string)args["kick_reason"]);
-                
+
             } else if (method.Equals("plugin_log"))
             {
                 string logMsg = (string)args["message"];
@@ -396,6 +401,9 @@ namespace PRoConEvents
 	<h4>Player Whitelist - </h4>
 	<p>Place any battlefield.agency player GUIDs (visible in the URL, like <code>https://battlefield.agency/player/&#60;id&#62;</code>) here to be excluded from being kicked.</p>
 	<br/>
+	<h4>Local Whitelist - </h4>
+	<p>Place any soldier names or EA Guids here. (Used by E4GLAdKats for local whitelist management.)</p>
+	<br/>
     <h3>Logging</h3><br/>
 	<h4>Announce enforced bans - </h4>
 	<p>Specifies if the plugin should announce enforced bans to global server chat.</p>
@@ -425,6 +433,7 @@ namespace PRoConEvents
                 new CPluginVariable("Enforcement|Enable glitching ban list", this.glitchingBans.GetType(), this.glitchingBans),
                 new CPluginVariable("Enforcement|Enable stolen account ban list", this.stolenaccountBans.GetType(), this.stolenaccountBans),
                 new CPluginVariable("Enforcement|Whitelist", typeof(string[]), this.whitelist.ConvertAll(guid => guid.ToString()).ToArray()),
+                new CPluginVariable("Enforcement|Local Whitelist", typeof(string[]), this.localWhitelist.ToArray()),
                 new CPluginVariable("Logging|Announce enforced bans", this.announceKicks.GetType(), this.announceKicks),
                 new CPluginVariable("Logging|Log kicks to file", this.kickLog.GetType(), this.kickLog),
                 new CPluginVariable("Logging|Kick log file path", this.kickLogPath.GetType(), this.kickLogPath),
@@ -517,6 +526,21 @@ namespace PRoConEvents
                     {
                         ConsoleWrite("Invalid GUID in whitelist", LogEventLevel.Error);
                     }
+                }
+            }
+            if (strVariable.Equals("Local Whitelist"))
+            {
+                List<String> whitelist = new List<String>();
+                if (strValue.Equals(""))
+                {
+                    this.localWhitelist = whitelist;
+                } else
+                {
+                    foreach (string str in CPluginVariable.DecodeStringArray(strValue))
+                    {
+                        whitelist.Add(str);
+                    }
+                    this.localWhitelist = whitelist;
                 }
             }
             if (strVariable.Equals("Log kicks to file"))
