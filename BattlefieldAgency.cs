@@ -280,8 +280,7 @@ namespace PRoConEvents
                 string guid = (string)args["guid"];
                 this.currentlyKicking.TryRemove(soldierName, out int _);
                 // Local whitelist with names / guids -> added by E4GL for whitelist management over adkats
-                bool locallyWhitelisted = localWhitelist.Contains(soldierName) || localWhitelist.Contains(guid);
-                if (!locallyWhitelisted) {
+                if (!localWhitelist.Contains(soldierName) && !localWhitelist.Contains(guid)) {
                     if ((bool)args["log"]) {
                         string logReason = (string)args["log_reason"];
                         ConsoleWrite(String.Format("[Kick] {0}", logReason));
